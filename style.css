@@ -1,32 +1,17 @@
 /* style.css */
 
-/* =========================
-   RESET / BASE
-========================= */
-* {
-  box-sizing: border-box;
-}
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-img {
-  max-width: 100%;
-  display: block;
-}
+/* Reset */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+img { max-width: 100%; display: block; }
 
-/* =========================
-   THEME VARIABLES
-========================= */
-:root {
+:root{
   --bg: #000;
   --fg: #fff;
-  --fg-soft: rgba(255, 255, 255, 0.92);
-  --fg-dim: rgba(255, 255, 255, 0.72);
-
-  --border: rgba(255, 255, 255, 0.14);
-  --card: rgba(255, 255, 255, 0.03);
+  --fg-soft: rgba(255,255,255,0.92);
+  --fg-dim: rgba(255,255,255,0.72);
+  --border: rgba(255,255,255,0.14);
+  --card: rgba(255,255,255,0.03);
 
   /* Font roles */
   --font-h1: "Caveat", cursive;
@@ -35,16 +20,14 @@ img {
   --font-poem-body: "M PLUS Rounded 1c", sans-serif;
 }
 
-body {
+body{
   background: var(--bg);
   color: var(--fg);
   line-height: 1.6;
 }
 
-/* =========================
-   HERO HEADER
-========================= */
-.hero {
+/* HERO */
+.hero{
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   padding: 56px 20px;
@@ -53,75 +36,72 @@ body {
   min-height: 45vh;
 }
 
-.hero-inner {
+.hero-inner{
   max-width: 980px;
   text-align: center;
 }
 
-.site-title {
+.site-title{
   font-family: var(--font-h1);
   font-size: clamp(2.8rem, 7vw, 5.2rem);
   margin: 0 0 10px;
   color: var(--fg);
 }
 
-.site-subtitle {
+.site-subtitle{
   font-family: var(--font-sub);
   font-size: clamp(1.2rem, 2.4vw, 1.7rem);
   margin: 0;
   color: var(--fg-soft);
 }
 
-/* =========================
-   PAGE WRAPPER
-========================= */
-.page {
+/* PAGE */
+.page{
   max-width: 1080px;
   margin: 0 auto;
   padding: 44px 20px 80px;
 }
 
-/* =========================
-   APPLE MUSIC EMBEDS
-========================= */
-.embed-wrap {
+/* Embeds centered */
+.embed-wrap{
   grid-column: 1 / -1;
-  margin: 0 0 10px;
-}
-
-.embed-wrap.center {
+  margin: 0 0 14px;
   display: grid;
   place-items: center;
 }
 
-/* =========================
-   SECTION BLOCKS
-========================= */
-.block {
-  margin: 34px 0 64px;
+.embed-wrap iframe{
+  width: 100%;
+  max-width: 660px;
+}
+
+/* Section blocks */
+.block{
+  margin: 36px 0 72px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
   align-items: start;
 }
 
-/* Image */
-.photo {
+/* Give images a slightly more “placed” look */
+.photo{
   width: 100%;
   border-radius: 18px;
   border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 18px 40px rgba(0,0,0,0.55);
 }
 
-/* Text card */
-.card {
+/* Poem card */
+.card{
   border-radius: 18px;
   border: 1px solid var(--border);
   padding: 18px 18px;
   background: var(--card);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 18px 40px rgba(0,0,0,0.55);
 }
 
-/* Poem title */
-.poem-title {
+.poem-title{
   font-family: var(--font-poem-title);
   font-weight: 700;
   font-size: 2.25rem;
@@ -130,77 +110,55 @@ body {
   color: var(--fg);
 }
 
-/* Poem body */
-.poem-body {
+.poem-body{
   font-family: var(--font-poem-body);
   font-weight: 100; /* thin */
   font-size: 1.05rem;
   line-height: 1.85;
   margin: 0;
   color: var(--fg-soft);
-
-  /* Preserve line breaks like poetry */
-  white-space: pre-line;
+  white-space: pre-line; /* preserve line breaks */
 }
 
-/* =========================
-   ALTERNATING LAYOUT (DESKTOP)
-========================= */
-@media (min-width: 900px) {
-  .block {
+/* Alternating layout on desktop */
+@media (min-width: 900px){
+  .block{
     grid-template-columns: 1.05fr 0.95fr;
-    gap: 22px;
+    gap: 24px;
     align-items: center;
   }
 
-  /* Even blocks swap: image right, text left
-     (Counts only .block elements) */
-  .block:nth-of-type(even) .photo {
-    order: 2;
-  }
-  .block:nth-of-type(even) .card {
-    order: 1;
-  }
+  /* Even blocks swap: text left, image right */
+  .block:nth-of-type(even) .photo { order: 2; }
+  .block:nth-of-type(even) .card  { order: 1; }
 
-  /* Embed always on top */
-  .embed-wrap {
-    order: 0;
-  }
+  /* Embed stays on top, centered */
+  .embed-wrap{ order: 0; }
 }
 
-/* =========================
-   CLOSING SECTION
-========================= */
-.closing {
-  margin-top: 80px;
-  padding-top: 20px;
+/* Closing section */
+.closing{
+  margin-top: 70px;
+  padding-top: 30px;
   border-top: 1px solid var(--border);
   display: grid;
   gap: 18px;
 }
 
-.closing-photo {
-  max-width: 760px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* =========================
-   FOOTER
-========================= */
-.footer {
+/* Footer */
+.footer{
   text-align: center;
   padding: 10px 0 0;
 }
 
-.footer-line {
+.footer-line{
   font-family: var(--font-sub);
   color: var(--fg-dim);
   margin: 10px 0 6px;
   font-size: 1.05rem;
 }
 
-.footer-line2 {
+.footer-line2{
   font-family: var(--font-h1);
   color: var(--fg-soft);
   margin: 0 0 10px;
