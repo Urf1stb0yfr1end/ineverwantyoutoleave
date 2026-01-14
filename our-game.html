@@ -15,7 +15,7 @@
       border:1px solid rgba(255,255,255,.12);
       backdrop-filter: blur(6px);
       user-select:none;
-      z-index: 10;
+      z-index:10;
     }
   </style>
 </head>
@@ -28,43 +28,44 @@
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
+  // Assets (must be in same folder as this HTML, or update paths)
   const bg = new Image(); bg.src = "background.png";
   const ch = new Image(); ch.src = "character.png";
 
+  // Input
   const keys = new Set();
   addEventListener("keydown", (e) => { keys.add(e.key.toLowerCase()); });
   addEventListener("keyup", (e) => { keys.delete(e.key.toLowerCase()); });
 
-  // Resize canvas to ALWAYS match the browser window (true fullscreen)
-  function resize() {
-    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  // Fullscreen canvas, crisp pixels on HiDPI
+  let DPR = 1;
+  function resize(){
+    DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
     const w = Math.floor(innerWidth);
     const h = Math.floor(innerHeight);
 
-    // match CSS size
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
 
-    // real pixel buffer (crisp on HiDPI)
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-
-    // draw in CSS pixel coords
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Draw in CSS pixel coordinates (not device pixels)
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.imageSmoothingEnabled = false;
   }
   addEventListener("resize", resize);
   resize();
 
-  // "Street lane" (walkable vertical strip) in *screen coords*
-  // These are ratios so it adapts to any resolution.
-  // If your street is higher/lower, tweak these.
-  const streetTopRatio = 0.56;     // ~300/540
-  const streetBottomRatio = 0.935; // ~505/540
+  // Street lane bounds (scale with screen)
+  // Top is a ratio; bottom is the actual bottom edge (so the chibi can touch the bottom).
+  const streetTopRatio = 0.56; // tweak if your street starts higher/lower
+  const bottomPad = 0;         // set to 1-4 if you ever see clipping
+  const streetTop = () => innerHeight * streetTopRatio;
+  const streetBottom = () => innerHeight - bottomPad;
 
-  // Optional: allow horizontal scrolling if map wider than screen
-  // We'll compute this after bg loads.
-  let mapScrollMax = 0;
+  // Camera scrolling OFF (kept for compatibility)
+  const mapScrollMax = 0;
+  let camX = 0;
 
   const player = {
     x: 280,
@@ -74,49 +75,23 @@
     speed: 240
   };
 
-  let camX = 0;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-  function streetTop()    { return innerHeight * streetTopRatio; }
-  function streetBottom() { return innerHeight * streetBottomRatio; }
 
   function depthScale(y){
     const top = streetTop();
     const bot = streetBottom();
-    const t = (y - top) / (bot - top);
-    return 0.70 + t * 0.55;
+    const t = (y - top) / (bot - top); // 0..1
+    return 0.70 + t * 0.55; // far -> near
   }
 
-  // Background draw: COVER the screen so nothing is "out of page".
-  // (fills entire browser; crops edges if aspect ratios differ)
-  function drawBg(){
+  function drawBgStretchToCorners(){
     const cw = innerWidth, chh = innerHeight;
-
     if (bg.complete && bg.naturalWidth) {
-      const iw = bg.naturalWidth, ih = bg.naturalHeight;
-
-      // Compute cover scale
-      const s = Math.max(cw / iw, chh / ih);
-      const dw = iw * s;
-      const dh = ih * s;
-
-      // Centered draw position, then apply camera on X
-      // We allow camX only within the drawable overflow.
-      const baseX = (cw - dw) / 2;
-      const baseY = (chh - dh) / 2;
-
-      // How much extra width exists beyond the screen (scrollable area)
-      const overflowX = Math.max(0, dw - cw);
-      mapScrollMax = overflowX; // world scroll in "screen pixels"
-
-      // camX scrolls within overflow range
-      const x = baseX - camX;
-      const y = baseY;
-
-      ctx.drawImage(bg, x, y, dw, dh);
+      // STRETCH to touch all 4 corners (no bars, no cropping; aspect may distort)
+      ctx.drawImage(bg, 0, 0, cw, chh);
     } else {
       ctx.fillStyle = "#0b1020";
-      ctx.fillRect(0,0,cw,chh);
+      ctx.fillRect(0, 0, cw, chh);
       ctx.fillStyle = "rgba(255,255,255,0.2)";
       ctx.fillText("Loading background.png...", 24, 36);
     }
@@ -149,39 +124,33 @@
     player.x += vx * sp * dt;
     player.y += vy * sp * dt;
 
-    // lock player to street bounds (Batman style)
+    // Lock to street lane, but allow feet to reach the bottom edge
     player.y = clamp(player.y, top, bot);
 
-    // subtle depth speed feeling
+    // Subtle depth speed feeling (optional vibe)
     player.x += vx * (sp * 0.15) * (1 - (player.y - top) / (bot - top)) * dt;
 
-    // keep player.x sane
+    // Horizontal bounds (not important since camX is off)
     player.x = clamp(player.x, 0, 999999);
 
-    // Camera follow: if background has overflow after "cover", allow scrolling
-    if (mapScrollMax > 0) {
-      const targetCam = (player.x - innerWidth * 0.45);
-      camX = clamp(targetCam, 0, mapScrollMax);
-    } else {
-      camX = 0;
-    }
+    camX = (mapScrollMax > 0) ? clamp(player.x - innerWidth * 0.45, 0, mapScrollMax) : 0;
 
     // Draw
-    ctx.clearRect(0,0,innerWidth,innerHeight);
-    drawBg();
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    drawBgStretchToCorners();
 
-    // Draw player with depth scale + shadow
     const s = depthScale(player.y);
     const w = player.baseW * s;
     const h = player.baseH * s;
 
+    // player.y is the "feet line"
     const px = Math.floor(player.x - camX);
     const py = Math.floor(player.y - h);
 
-    // shadow
+    // shadow (kept slightly above exact bottom so it doesn't look cut)
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
-    ctx.ellipse(px + w/2, py + h - 6, w*0.32, h*0.10, 0, 0, Math.PI*2);
+    ctx.ellipse(px + w/2, player.y - 6, w*0.32, h*0.10, 0, 0, Math.PI*2);
     ctx.fill();
 
     if (ch.complete && ch.naturalWidth) {
