@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beat-em-up Street Walk</title>
+  <style>
+    html, body { margin:0; height:100%; background:#05070d; overflow:hidden; }
+    canvas { width:100vw; height:100vh; display:block; image-rendering: pixelated; }
+    .hud{
+      position:fixed; left:12px; top:12px;
+      color:#d7e6ff; font:14px system-ui,Segoe UI,Arial;
+      background:rgba(0,0,0,.35);
+      padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(6px);
+      user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud"><b>Arrow keys / WASD</b> move • Shift = run</div>
+  <canvas id="c" width="960" height="540"></canvas>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const bg = new Image(); bg.src = "background.png";
+  const ch = new Image(); ch.src = "character.png";
+
+  const keys = new Set();
+  addEventListener("keydown", (e) => { keys.add(e.key.toLowerCase()); });
+  addEventListener("keyup", (e) => { keys.delete(e.key.toLowerCase()); });
+
+  // "Street lane" (walkable vertical strip) in screen coords
+  // TWEAK THESE TWO NUMBERS to match your background street area.
+  const streetTop = 300;     // y where the far edge of street starts
+  const streetBottom = 505;  // y where the near edge of street ends
+
+  // Optional: allow horizontal scrolling if map wider than screen
+  // Set to 0 to disable camera scrolling.
+  const mapScrollMax = 0; // you can increase if your background is wider than canvas
+
+  const player = {
+    x: 280,
+    y: 440,
+    baseW: 56,   // logical size; we scale from this
+    baseH: 56,
+    speed: 240
+  };
+
+  let camX = 0;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function depthScale(y){
+    // y closer to bottom -> bigger; y toward top -> smaller
+    const t = (y - streetTop) / (streetBottom - streetTop);
+    return 0.70 + t * 0.55; // 0.70 far away -> 1.25 near
+  }
+
+  let last = performance.now();
+  function loop(now){
+    const dt = (now - last) / 1000;
+    last = now;
+
+    const run = keys.has("shift") ? 1.55 : 1.0;
+    const sp = player.speed * run;
+
+    let vx = 0, vy = 0;
+    const left  = keys.has("arrowleft")  || keys.has("a");
+    const right = keys.has("arrowright") || keys.has("d");
+    const up    = keys.has("arrowup")    || keys.has("w");
+    const down  = keys.has("arrowdown")  || keys.has("s");
+
+    if (left) vx -= 1;
+    if (right) vx += 1;
+    if (up) vy -= 1;
+    if (down) vy += 1;
+
+    // normalize diagonal
+    if (vx && vy) { vx *= 0.7071; vy *= 0.7071; }
+
+    player.x += vx * sp * dt;
+    player.y += vy * sp * dt;
+
+    // lock player to street bounds (Batman style)
+    player.y = clamp(player.y, streetTop, streetBottom);
+
+    // Depth affects "effective speed" a bit (farther away feels slower)
+    // (subtle, but helps the vibe)
+    player.x += vx * (sp * 0.15) * (1 - (player.y - streetTop) / (streetBottom - streetTop)) * dt;
+
+    // Horizontal bounds (world coords)
+    player.x = clamp(player.x, 0, 9999);
+
+    // Camera follow (optional)
+    if (mapScrollMax > 0) {
+      const targetCam = player.x - canvas.width * 0.45;
+      camX = clamp(targetCam, 0, mapScrollMax);
+    } else {
+      camX = 0;
+    }
+
+    // Draw background
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (bg.complete && bg.naturalWidth) {
+      ctx.drawImage(bg, -camX, 0);
+    } else {
+      ctx.fillStyle = "#0b1020";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillText("Loading background.png...", 24, 36);
+    }
+
+    // Draw player with depth scale + shadow
+    const s = depthScale(player.y);
+    const w = player.baseW * s;
+    const h = player.baseH * s;
+
+    const px = Math.floor(player.x - camX);
+    const py = Math.floor(player.y - h);
+
+    // shadow
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(px + w/2, py + h - 6, w*0.32, h*0.10, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    if (ch.complete && ch.naturalWidth) {
+      ctx.drawImage(ch, px, py, w, h);
+    } else {
+      ctx.fillStyle = "#8fe3ff";
+      ctx.fillRect(px, py, w, h);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
