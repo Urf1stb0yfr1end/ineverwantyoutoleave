@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cosas</title>
+
+  <style>
+    :root{
+      --bg:#0b0f17; --card:#101827; --text:#e8eefc; --muted:#9fb0d0;
+      --border:rgba(255,255,255,.08);
+    }
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 20% -20%, #20305a 0%, transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, #3b1f4a 0%, transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{ padding:28px 18px 10px; max-width:1100px; margin:0 auto; }
+    h1{ margin:0; font-size:22px; letter-spacing:.2px; }
+    p{ margin:6px 0 0; color:var(--muted); font-size:14px; }
+
+    main{ max-width:1100px; margin:0 auto; padding:18px; }
+
+    .toolbar{
+      display:flex; gap:10px; margin:12px 0 18px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+    }
+    .lefttools{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      min-width:240px;
+      outline:none;
+    }
+    .pill{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-size:12px;
+      background:rgba(255,255,255,.04);
+    }
+    .link{
+      color:var(--muted); font-size:13px; text-decoration:none;
+      border-bottom:1px dotted rgba(255,255,255,.2);
+    }
+
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    }
+    .card{
+      background:rgba(16,24,39,.72);
+      border:1px solid var(--border);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+      cursor:pointer;
+    }
+    .thumb{
+      display:block; width:100%; aspect-ratio: 1 / 1;
+      object-fit: cover; background:#0e1525;
+    }
+    .meta{
+      padding:10px 12px; font-size:12px; color:var(--muted);
+      display:flex; justify-content:space-between; gap:10px;
+    }
+    .name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .error{
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,120,120,.28);
+      background:rgba(255,0,0,.08);
+      color:#ffcdcd;
+      font-size:13px;
+      display:none;
+    }
+
+    /* lightbox */
+    .lightbox{
+      position:fixed; inset:0; display:none;
+      background:rgba(0,0,0,.78);
+      align-items:center; justify-content:center;
+      padding:26px;
+      z-index:999;
+    }
+    .lightbox.open{ display:flex; }
+    .lightbox img{
+      max-width:min(1100px, 95vw);
+      max-height:85vh;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 20px 70px rgba(0,0,0,.6);
+      background:#000;
+    }
+    .lbbar{
+      position:fixed; top:16px; left:0; right:0;
+      display:flex; gap:10px; justify-content:center;
+      pointer-events:none;
+    }
+    .lbbar span{
+      pointer-events:auto;
+      background:rgba(16,24,39,.75);
+      border:1px solid rgba(255,255,255,.12);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      color:var(--muted);
+      backdrop-filter: blur(6px);
+      max-width:min(1100px, 92vw);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🧺 Cosas</h1>
+    <p>Root gallery (filenames baked into this page). Click any image to zoom.</p>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="lefttools">
+        <input id="search" placeholder="Search filename…" />
+        <span class="pill" id="count">Loading…</span>
+      </div>
+      <a class="link" href="index.html">← back to index</a>
+    </div>
+
+    <div class="error" id="err"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <div class="lbbar"><span id="lbname"> </span></div>
+    <img id="lbimg" src="" alt="">
+  </div>
+
+  <script>
+    // ✅ Your filenames (no directories)
+    const images = [
+      "4f5721e4-a0fb-4837-8ea2-06cc1bf0e3f4-md.jpeg",
+      "8ee1b5ab-5e35-44f3-8d2e-55ca6f134590-md.jpeg",
+      "81cd5d51-c93a-4aba-88ce-ebcea1f11ebe.png",
+      "95fd072f-d576-4a55-9493-83cfd006e34b.png",
+      "683aa902-2158-405b-b91f-4cbde9e1423f.png",
+      "902d953e-ca38-4840-bfb0-f1abd754ca85.png",
+      "919e45ca-d779-4755-97eb-4ece13dfe94c.png",
+      "56044d73-0359-4d0e-86f4-a98c3806dfcd.png",
+      "89514b12-52bd-4910-b3bf-26a06c39a4c6.png",
+      "91306c88-b0f8-41a3-a5cf-79fb3327d538.png",
+      "A Minus Rating.jpeg",
+      "A RATING.png",
+      "A.PLUS.jpeg",
+      "b6d234f0-d206-4305-8dec-7b8af6b646e2.png",
+      "c1c0a88f-f18a-4843-8249-015ee808da31-md.jpeg",
+      "c4251c62-8db0-48c0-a233-24038bf201b3.png",
+      "c25405fd-26e0-4464-aa36-97d8596d65b6.png",
+      "c2424430-7f62-4d0a-bcc2-26a4652ccd68.png",
+      "da01ba71-2e6f-4939-a59c-91b7365cf877 (1).png",
+      "f1d11a8a-fc26-4ef8-bc85-56ddfd8037a5.png",
+      "f6b8cb78-181a-42de-85e4-76102e815f08.png",
+      "fc07bef1-2e09-4bb2-b287-a54fe9d8c3d0.png",
+      "historical. not blonde or blue eyed, and might have been considered anglo for the majority of history. certaintly white.png",
+      "icono, el guapo.png",
+      "mexican people ARE JUST AS HUMAN AS WHITE PEOPLE.png",
+      "my spirit animal(79).jpg",
+      "NEEDS WORK.png",
+      "tricked all these out of some people, believable, ranked A.png",
+      "wertr.png",
+      "you dont realize what you did, soon you will see vengeance, from now an forever more, no hispanic man will think himself safe, as long as a white man is in  charge.png"
+    ];
+
+    const grid = document.getElementById("grid");
+    const search = document.getElementById("search");
+    const count = document.getElementById("count");
+    const err = document.getElementById("err");
+
+    const lightbox = document.getElementById("lightbox");
+    const lbimg = document.getElementById("lbimg");
+    const lbname = document.getElementById("lbname");
+
+    function encodePath(filename){
+      // Encode each segment so spaces, commas, parentheses, etc work.
+      // (No slashes expected, but this is safe anyway.)
+      return filename.split("/").map(encodeURIComponent).join("/");
+    }
+
+    function openLightbox(file){
+      const url = encodePath(file);
+      lbimg.src = url;
+      lbname.textContent = file + "  (click to close, Esc)";
+      lightbox.classList.add("open");
+    }
+
+    function closeLightbox(){
+      lightbox.classList.remove("open");
+      lbimg.src = "";
+    }
+
+    lightbox.addEventListener("click", closeLightbox);
+    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeLightbox(); });
+
+    function makeCard(file){
+      const url = encodePath(file);
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.title = "Open " + file;
+
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.loading = "lazy";
+      img.alt = file;
+      img.src = url;
+
+      // If an image 404s, show a warning once and hide that card
+      img.onerror = () => {
+        card.style.display = "none";
+        err.style.display = "block";
+        err.textContent =
+          "One or more images failed to load. Check that the filenames in cosas.html match exactly what’s in the GitHub repo (including capitalization). Also confirm the images are in the same folder as cosas.html.";
+      };
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `<span class="name">${file}</span><span>↗</span>`;
+
+      card.appendChild(img);
+      card.appendChild(meta);
+      card.addEventListener("click", ()=> openLightbox(file));
+
+      return card;
+    }
+
+    function render(list){
+      grid.innerHTML = "";
+      err.style.display = "none";
+      for(const file of list){
+        grid.appendChild(makeCard(file));
+      }
+      count.textContent = `${list.length} image${list.length===1?"":"s"}`;
+    }
+
+    const all = images.slice();
+    render(all);
+
+    search.addEventListener("input", () => {
+      const q = search.value.toLowerCase().trim();
+      if(!q) return render(all);
+      render(all.filter(x => x.toLowerCase().includes(q)));
+    });
+  </script>
+</body>
+</html>
