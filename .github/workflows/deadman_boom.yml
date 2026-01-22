@@ -1,0 +1,71 @@
+name: Deadman boom (publish if alive.txt is 2+ days old)
+
+on:
+  schedule:
+    # Runs daily (UTC time)
+    - cron: "20 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  boom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Decide whether to BOOM
+        id: decide
+        run: |
+          GRACE_DAYS=2
+
+          if [ ! -f "alive.txt" ]; then
+            echo "alive.txt missing -> boom"
+            echo "boom=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          LAST=$(cat alive.txt | tr -d '\r\n ')
+          echo "Last heartbeat: $LAST"
+
+          NOW=$(date -u +%s)
+          LASTS=$(date -u -d "$LAST" +%s || echo 0)
+
+          if [ "$LASTS" -eq 0 ]; then
+            echo "Bad date in alive.txt -> boom"
+            echo "boom=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          AGE=$(( (NOW - LASTS) / 86400 ))
+          echo "Age days: $AGE"
+
+          if [ "$AGE" -ge "$GRACE_DAYS" ]; then
+            echo "boom=true" >> $GITHUB_OUTPUT
+          else
+            echo "boom=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Write secret HTML into cosas.html
+        if: steps.decide.outputs.boom == 'true'
+        env:
+          COSAS_HTML: ${{ secrets.COSAS_HTML }}
+        run: |
+          if [ -z "$COSAS_HTML" ]; then
+            echo "ERROR: COSAS_HTML secret is empty/missing."
+            exit 1
+          fi
+          printf "%s" "$COSAS_HTML" > cosas.html
+
+      - name: Commit and push (publish)
+        if: steps.decide.outputs.boom == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cosas.html
+          git commit -m "DEADMAN BOOM: publish cosas.html" || echo "No changes"
+          git push origin main
